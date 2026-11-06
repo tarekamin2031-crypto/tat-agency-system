@@ -1,5 +1,6 @@
 const nodemailer = require("nodemailer");
 const defaultPool = require("../db/pool");
+const { background } = require("./background");
 const { decrypt } = require("./secrets");
 const { render } = require("./emailTemplates");
 
@@ -99,6 +100,7 @@ async function sendEmail({ agencyId = null, to, template, lang = "ar", vars = {}
     // Without any SMTP there is nothing to retry: record the failure right away.
     const job = deliver(id, db).catch((e) => ({ ok: false, error: String(e && e.message) }));
     if (wait) return { ...(await job), id };
+    background(job);
     return { ok: true, queued: true, id };
   } catch (err) {
     console.error("[mailer] sendEmail failed:", err.message);

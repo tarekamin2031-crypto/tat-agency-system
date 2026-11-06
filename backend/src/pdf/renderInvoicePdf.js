@@ -19,10 +19,13 @@ async function renderInvoicePdf(invoice, client, agencyId, lang = "ar") {
   const [company, logoDataUri] = await Promise.all([getCompany(agencyId), getLogoDataUri(agencyId)]);
   const html = buildInvoiceHtml(invoice, client, { company, logoDataUri, lang });
 
-  const browser = await puppeteer.launch({
-    executablePath: CHROMIUM_PATH,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
+  let launchOptions = { executablePath: CHROMIUM_PATH, args: ["--no-sandbox", "--disable-setuid-sandbox"] };
+  if (process.env.VERCEL) {
+    // Vercel has no system Chromium: use the serverless build (fonts are embedded in the invoice HTML).
+    const chromium = require("@sparticuz/chromium");
+    launchOptions = { executablePath: await chromium.executablePath(), args: chromium.args, headless: "shell" };
+  }
+  const browser = await puppeteer.launch(launchOptions);
 
   try {
     const page = await browser.newPage();

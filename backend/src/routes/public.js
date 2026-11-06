@@ -1,6 +1,7 @@
 const express = require("express");
 const { validateLead, saveLead, notifyLead } = require("../lib/leads");
 const { audit } = require("../lib/audit");
+const { background } = require("../lib/background");
 
 // Public (no sign-in) endpoints used by the marketing landing page.
 const router = express.Router();
@@ -30,7 +31,7 @@ router.post("/contact", contactLimiter, async (req, res) => {
   try {
     const id = await saveLead(value, req);
     audit(null, { action: "lead.create", entity: "lead", entityId: id, agencyId: null, user: { name: value.name, email: value.email }, summary: `${value.name} (${value.interest})` });
-    notifyLead(value); // background
+    background(notifyLead(value)); // after the response
     res.status(201).json({ ok: true });
   } catch (err) {
     console.error(err);

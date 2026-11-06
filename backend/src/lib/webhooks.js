@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const dns = require("dns").promises;
 const net = require("net");
 const defaultPool = require("../db/pool");
+const { background } = require("./background");
 
 // Events an endpoint can subscribe to ("*" = all of them).
 const EVENTS = [
@@ -171,7 +172,7 @@ async function emit(agencyId, event, data, db = defaultPool) {
       ids.push(r.rows[0].id);
     }
     // fire-and-forget: the request that caused the event must never wait on a customer's server
-    if (ids.length) setImmediate(() => ids.forEach((id) => deliver(id, db).catch((err) => console.error("[webhooks]", err.message))));
+    if (ids.length) background(Promise.all(ids.map((id) => deliver(id, db).catch((err) => console.error("[webhooks]", err.message)))));
     return ids.length;
   } catch (err) {
     console.error("[webhooks] emit failed:", event, err.message);

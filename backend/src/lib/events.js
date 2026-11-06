@@ -1,6 +1,7 @@
 // Business events: fan out to the agency's webhooks and (optionally) to email.
 // Every function is fire-and-forget and never throws into the request that caused it.
 const pool = require("../db/pool");
+const { background } = require("./background");
 const { emit } = require("./webhooks");
 const { sendEmail } = require("./mailer");
 const { getCompany } = require("./company");
@@ -45,7 +46,7 @@ async function clientName(id, agencyId) {
 
 const money = (n, c) => `${Number(n).toLocaleString("en-US")} ${c || ""}`.trim();
 
-module.exports = {
+const api = {
   invoiceData, clientData, agencyAdmins, notifyAdmins,
 
   invoiceCreated: async (req, inv) => emit(req.user.agencyId, "invoice.created", { ...invoiceData(inv), client_name: await clientName(inv.client_id, req.user.agencyId) }),
@@ -58,3 +59,10 @@ module.exports = {
   clientCreated: (req, c) => emit(req.user.agencyId, "client.created", clientData(c)),
   clientUpdated: (req, c) => emit(req.user.agencyId, "client.updated", clientData(c)),
 };
+
+// Event hooks are fire-and-forget for the caller: keep them alive after the response on serverless hosts.
+for (const k of ["invoiceCreated", "invoicePaid", "paymentRecorded", "clientCreated", "clientUpdated"]) {
+  const fn = api[k];
+  api[k] = (...args) => background(fn(...args));
+}
+module.exports = api;

@@ -1,4 +1,5 @@
 const defaultPool = require("../db/pool");
+const { background } = require("./background");
 
 // Never store secrets or binary blobs in the log.
 const REDACT = /(_data$|password|token_version|^password_hash$)/i;
@@ -30,7 +31,7 @@ function changedOnly(before, after) {
  *   audit(req, { action: "invoice.update", entity: "invoice", entityId: id, before, after, summary })
  *   audit(req, { action: "auth.login_failed", user: { email }, agencyId: null })
  */
-async function audit(req, { action, entity = null, entityId = null, before = null, after = null, summary = null, user = null, agencyId, db = defaultPool }) {
+async function writeAudit(req, { action, entity = null, entityId = null, before = null, after = null, summary = null, user = null, agencyId, db = defaultPool }) {
   try {
     const actor = user || (req && req.user) || {};
     let b = clean(before), a = clean(after);
@@ -51,6 +52,12 @@ async function audit(req, { action, entity = null, entityId = null, before = nul
   } catch (err) {
     console.error("[audit] failed to record", action, err.message);
   }
+}
+
+function audit(req, opts) {
+  const p = writeAudit(req, opts);
+  background(p);
+  return p;
 }
 
 // Convenience: read one row (scoped to the agency) so a handler can log "before".

@@ -8,7 +8,7 @@ const ssl = process.env.DB_SSL === "true" ? { rejectUnauthorized: process.env.DB
 
 const pool = new Pool(
   process.env.DATABASE_URL
-    ? { connectionString: process.env.DATABASE_URL, ssl, max: Number(process.env.DB_POOL_MAX || 10) }
+    ? { connectionString: process.env.DATABASE_URL, ssl, max: Number(process.env.DB_POOL_MAX || (process.env.VERCEL ? 3 : 10)) }
     : {
         host: process.env.DB_HOST || "db",
         port: process.env.DB_PORT || 5432,
