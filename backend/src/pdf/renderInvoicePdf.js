@@ -22,7 +22,7 @@ async function renderInvoicePdf(invoice, client, agencyId, lang = "ar") {
   let launchOptions = { executablePath: CHROMIUM_PATH, args: ["--no-sandbox", "--disable-setuid-sandbox"] };
   if (process.env.VERCEL) {
     // Vercel has no system Chromium: use the serverless build (fonts are embedded in the invoice HTML).
-    const chromium = require("@sparticuz/chromium");
+    const chromium = (await import("@sparticuz/chromium")).default; // ESM-only package
     launchOptions = { executablePath: await chromium.executablePath(), args: chromium.args, headless: "shell" };
   }
   const puppeteer = (await import("puppeteer-core")).default;
