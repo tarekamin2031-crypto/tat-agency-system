@@ -1,0 +1,65 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-tat_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-tat_password}
+      POSTGRES_DB: ${DB_NAME:-tat_agency}
+    volumes:
+      - tat_pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-tat_user} -d ${DB_NAME:-tat_agency}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-tat_user}
+      DB_PASSWORD: ${DB_PASSWORD:-tat_password}
+      DB_NAME: ${DB_NAME:-tat_agency}
+      JWT_SECRET: ${JWT_SECRET:?Set a strong JWT_SECRET in your .env file}
+      ADMIN_NAME: ${ADMIN_NAME:-Admin}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@tatagency.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set an initial ADMIN_PASSWORD in your .env file}
+      PLATFORM_ADMIN_EMAIL: ${PLATFORM_ADMIN_EMAIL:-}
+      APP_URL: ${APP_URL:-}
+      SECRETS_KEY: ${SECRETS_KEY:-}
+      CORS_ORIGIN: ${CORS_ORIGIN:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-}
+      PORT: 4000
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-4000}:4000"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+
+volumes:
+  tat_pgdata:

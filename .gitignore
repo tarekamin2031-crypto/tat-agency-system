@@ -1,0 +1,22 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+.vercel/
+
+# secrets — never commit real values (the example file is fine)
+.env
+.env.*
+!.env.example
+
+# data & backups — they hold real client/financial data and password hashes
+backups/
+*Backup*/
+*.dump
+*.sql
+!database/schema.sql
+*.bak
+
+# local tooling
+.claude/
+.neon

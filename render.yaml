@@ -1,0 +1,44 @@
+# Render Blueprint — backend only (the frontend lives on Vercel, the database on Neon).
+# Render → New → Blueprint → pick this repo. Values marked `sync: false` are asked for in the dashboard
+# and are never stored in the repo.
+services:
+  - type: web
+    name: tat-backend
+    runtime: docker
+    plan: free
+    region: frankfurt          # closest to Egypt/Gulf among the free regions
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .           # the Dockerfile copies both backend/ and database/
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: TZ
+        value: Africa/Cairo
+      - key: DB_SSL
+        value: "true"
+      - key: DATABASE_URL        # Neon POOLED connection string (host contains -pooler)
+        sync: false
+      - key: DATABASE_URL_UNPOOLED   # Neon DIRECT connection string — used only for migrations
+        sync: false
+      - key: JWT_SECRET          # keep the SAME value you use today, otherwise everyone is signed out
+        sync: false
+      - key: SECRETS_KEY
+        sync: false
+      - key: ADMIN_EMAIL         # must equal your existing admin's email
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: ADMIN_NAME
+        value: Admin
+      - key: PLATFORM_ADMIN_EMAIL
+        sync: false
+      - key: CORS_ORIGIN         # https://<your-vercel-domain>
+        sync: false
+      - key: APP_URL             # https://<your-vercel-domain>
+        sync: false
+      - key: CONTACT_NOTIFY_EMAIL
+        value: tarekamin2031@gmail.com

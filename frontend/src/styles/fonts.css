@@ -1,0 +1,32 @@
+/* Self-hosted fonts (no Google Fonts request, works offline).
+   Inter + JetBrains Mono cover Latin text and numbers; Tajawal covers Arabic
+   (and is the brand's Arabic face). Font stacks live in tokens.css. */
+
+/* Tajawal — Arabic */
+@font-face { font-family: 'Tajawal'; font-weight: 400; font-style: normal; font-display: swap;
+  src: url('/fonts/tajawal-arabic-400-normal.woff2') format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF, U+200C-200E; }
+@font-face { font-family: 'Tajawal'; font-weight: 700; font-style: normal; font-display: swap;
+  src: url('/fonts/tajawal-arabic-700-normal.woff2') format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF, U+200C-200E; }
+/* Tajawal — Latin fallback */
+@font-face { font-family: 'Tajawal'; font-weight: 400; font-style: normal; font-display: swap;
+  src: url('/fonts/tajawal-latin-400-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215; }
+@font-face { font-family: 'Tajawal'; font-weight: 700; font-style: normal; font-display: swap;
+  src: url('/fonts/tajawal-latin-700-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215; }
+
+/* Inter — Latin text & numbers */
+@font-face { font-family: 'Inter'; font-weight: 400; font-style: normal; font-display: swap; src: url('/fonts/inter-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-weight: 500; font-style: normal; font-display: swap; src: url('/fonts/inter-latin-500-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-weight: 600; font-style: normal; font-display: swap; src: url('/fonts/inter-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-weight: 700; font-style: normal; font-display: swap; src: url('/fonts/inter-latin-700-normal.woff2') format('woff2'); }
+
+/* JetBrains Mono — micro-labels */
+@font-face { font-family: 'JetBrains Mono'; font-weight: 500; font-style: normal; font-display: swap; src: url('/fonts/jetbrains-mono-latin-500-normal.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-weight: 600; font-style: normal; font-display: swap; src: url('/fonts/jetbrains-mono-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-weight: 700; font-style: normal; font-display: swap; src: url('/fonts/jetbrains-mono-latin-700-normal.woff2') format('woff2'); }
+
+/* Form controls don't inherit the page font by default. */
+input, select, textarea, button { font-family: inherit; }
