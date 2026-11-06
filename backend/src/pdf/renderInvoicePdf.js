@@ -1,4 +1,4 @@
-const puppeteer = require("puppeteer-core");
+// puppeteer-core is ESM-only: load it lazily with import() so older Node versions (Vercel) can still start the app.
 const { buildInvoiceHtml } = require("./invoiceTemplate");
 const { getCompany, getLogoDataUri } = require("../lib/company");
 
@@ -25,6 +25,7 @@ async function renderInvoicePdf(invoice, client, agencyId, lang = "ar") {
     const chromium = require("@sparticuz/chromium");
     launchOptions = { executablePath: await chromium.executablePath(), args: chromium.args, headless: "shell" };
   }
+  const puppeteer = (await import("puppeteer-core")).default;
   const browser = await puppeteer.launch(launchOptions);
 
   try {
