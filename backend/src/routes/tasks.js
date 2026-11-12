@@ -31,6 +31,40 @@ router.get("/assignees", requirePermission("tasks", "view"), async (req, res) =>
   res.json(rows);
 });
 
+// GET /api/tasks/clients — the agency's clients with their tasks on/off switch
+router.get("/clients", requirePermission("tasks", "view"), async (req, res) => {
+  const { rows } = await pool.query("SELECT id, name, contract_status, tasks_enabled FROM clients WHERE agency_id = $1 ORDER BY name", [req.user.agencyId]);
+  res.json(rows);
+});
+
+// PUT /api/tasks/clients/:id { enabled } — pause/resume a client's tasks (nothing is deleted; generation skips paused clients)
+router.put("/clients/:id", requirePermission("tasks", "edit"), async (req, res) => {
+  const agencyId = req.user.agencyId;
+  if (!(await ownsRow("clients", req.params.id, agencyId))) return res.status(404).json({ error: "Client not found" });
+  const enabled = !!(req.body && req.body.enabled);
+  const { rows } = await pool.query("UPDATE clients SET tasks_enabled = $1 WHERE id = $2 AND agency_id = $3 RETURNING id, name, tasks_enabled", [enabled, req.params.id, agencyId]);
+  audit(req, { action: "client.tasks_toggle", entity: "client", entityId: rows[0].id, after: { tasks_enabled: enabled }, summary: rows[0].name });
+  res.json(rows[0]);
+});
+
+// DELETE /api/tasks/clients/:id?month=YYYY-MM — remove a client from the tasks system: pause it, delete its templates
+// and its tasks of that month (other months are kept as history).
+router.delete("/clients/:id", requirePermission("tasks", "delete"), async (req, res) => {
+  try {
+    const agencyId = req.user.agencyId;
+    if (!(await ownsRow("clients", req.params.id, agencyId))) return res.status(404).json({ error: "Client not found" });
+    const month = MONTH_RE.test(String(req.query.month || "")) ? req.query.month : monthOf();
+    const client = (await pool.query("UPDATE clients SET tasks_enabled = false WHERE id = $1 AND agency_id = $2 RETURNING id, name", [req.params.id, agencyId])).rows[0];
+    const tpl = await pool.query("DELETE FROM task_templates WHERE client_id = $1 AND agency_id = $2", [client.id, agencyId]);
+    const tsk = await pool.query("DELETE FROM tasks WHERE client_id = $1 AND agency_id = $2 AND month = $3", [client.id, agencyId, month]);
+    audit(req, { action: "client.tasks_remove", entity: "client", entityId: client.id, after: { month, templates: tpl.rowCount, tasks: tsk.rowCount }, summary: client.name });
+    res.json({ templates: tpl.rowCount, tasks: tsk.rowCount, month });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error removing client tasks" });
+  }
+});
+
 // GET /api/tasks?month=YYYY-MM[&client_id=][&assignee_id=]
 router.get("/", requirePermission("tasks", "view"), async (req, res) => {
   const month = MONTH_RE.test(String(req.query.month || "")) ? req.query.month : monthOf();
@@ -199,6 +233,8 @@ router.post("/templates/defaults", requirePermission("tasks", "create"), async (
     const clientId = intOrNull(req.body && req.body.client_id);
     if (Number.isNaN(clientId) || (clientId !== null && !(await ownsRow("clients", clientId, agencyId)))) return res.status(400).json({ error: "client not found" });
     const result = await seedDefaultTemplates(agencyId, clientId);
+    // asking for a specific client's standard tasks switches its tasks back on
+    if (clientId) await pool.query("UPDATE clients SET tasks_enabled = true WHERE id = $1 AND agency_id = $2", [clientId, agencyId]);
     audit(req, { action: "task_template.seed_defaults", entity: "task_template", entityId: null, after: result, summary: `${result.created} / ${result.clients}` });
     res.json(result);
   } catch (err) {

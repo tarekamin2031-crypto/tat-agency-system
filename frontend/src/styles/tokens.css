@@ -693,4 +693,11 @@ html[dir="ltr"] .tat-pop { left: auto; right: 0; }
 .tat-tpl-list .row.off { opacity: .55; }
 .tat-tpl-list .t { font-weight: 600; flex: 1; min-width: 0; }
 .tat-tpl-list .m { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--ink-3); }
+.tat-matrix .cname { display: flex; align-items: center; gap: 4px; }
+.tat-matrix .client .manage { max-width: none; width: 22px; height: 22px; flex: none; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; color: var(--ink-3); opacity: 0; transition: opacity .12s; }
+.tat-matrix tr:hover .client .manage, .tat-matrix .client .manage:focus-visible { opacity: 1; }
+.tat-matrix .client .manage:hover { background: var(--surface-1); color: var(--ink); }
+@media (hover: none) { .tat-matrix .client .manage { opacity: .7; } }
+.tat-tpl-state { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 10px 0 2px; }
+.tat-btn-ghost.danger { color: var(--red); }
 .tat-tpl-add { border-top: 1px solid var(--border); margin-top: 8px; padding-top: 4px; }

@@ -34,7 +34,7 @@ const VERB_LABELS = {
   get services_update() { return t("تعديل خدمات العميل"); }, get follow_up() { return t("إضافة متابعة"); }, get reminder() { return t("إرسال تذكير"); }, get contacted() { return t("تم التواصل"); },
   get confirm_payment() { return t("تأكيد الدفع"); }, get logo_update() { return t("تغيير الشعار"); }, get logo_delete() { return t("حذف الشعار"); }, get role_assigned() { return t("تغيير الدور"); },
   get email_update() { return t("تعديل إعدادات البريد"); }, get email_test() { return t("اختبار البريد"); }, get rotate() { return t("تجديد مفتاح Webhook"); }, get test() { return t("اختبار Webhook"); }, get password_reset_request() { return t("طلب إعادة تعيين كلمة المرور"); },
-  get enable() { return t("تفعيل"); }, get disable() { return t("إيقاف"); },
+  get enable() { return t("تفعيل"); }, get tasks_toggle() { return t("تفعيل/إيقاف تاسكات العميل"); }, get tasks_remove() { return t("إزالة العميل من التاسكات"); }, get seed_defaults() { return t("إضافة التاسكات الأساسية"); }, get client_toggle() { return t("تفعيل/إيقاف تاسكات العميل"); }, get disable() { return t("إيقاف"); },
 };
 
 // "invoice.create" -> { entity: "فاتورة", verb: "إضافة", get label() { return t("إضافة فاتورة"); } }

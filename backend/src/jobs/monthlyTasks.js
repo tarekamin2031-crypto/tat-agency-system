@@ -23,7 +23,7 @@ async function generateTasksForMonth(month, agencyId = null, db = pool) {
             END
        FROM task_templates tt
        JOIN clients c ON c.id = tt.client_id AND c.agency_id = tt.agency_id
-      WHERE tt.active AND c.contract_status = 'active'
+      WHERE tt.active AND c.contract_status = 'active' AND c.tasks_enabled
         AND ($2::int IS NULL OR tt.agency_id = $2::int)
      ON CONFLICT (template_id, month) WHERE template_id IS NOT NULL DO NOTHING
      RETURNING id`,
@@ -53,7 +53,7 @@ async function seedDefaultTemplates(agencyId, clientId = null, db = pool) {
      SELECT c.agency_id, c.id, d.title, 'normal'
        FROM clients c CROSS JOIN unnest($3::text[]) WITH ORDINALITY AS d(title, ord)
       WHERE c.agency_id = $1::int
-        AND (($2::int IS NULL AND c.contract_status = 'active') OR c.id = $2::int)
+        AND (($2::int IS NULL AND c.contract_status = 'active' AND c.tasks_enabled) OR c.id = $2::int)
         AND NOT EXISTS (SELECT 1 FROM task_templates tt WHERE tt.client_id = c.id AND tt.title = d.title)
       ORDER BY c.id, d.ord
      RETURNING client_id`,

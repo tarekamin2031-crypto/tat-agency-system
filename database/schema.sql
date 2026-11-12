@@ -602,3 +602,6 @@ UPDATE roles SET permissions = permissions || '{"tasks":["view","create","edit"]
   WHERE is_system AND key = 'account_manager' AND NOT (permissions ? 'tasks');
 UPDATE roles SET permissions = permissions || '{"tasks":["view"]}'::jsonb
   WHERE is_system AND key = 'viewer' AND NOT (permissions ? 'tasks');
+
+-- Tasks: a client can be switched off (no template seeding / monthly generation) without deleting anything.
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS tasks_enabled BOOLEAN NOT NULL DEFAULT true;

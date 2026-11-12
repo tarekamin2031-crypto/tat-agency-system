@@ -43,13 +43,14 @@ export default function Tasks() {
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState(null); // task object (id => edit, no id => new)
   const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [tplClient, setTplClient] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const [rows, cl, pe] = await Promise.all([
         api.listTasks(`month=${month}`),
-        api.listClients().catch(() => []),
+        api.taskClients().catch(() => api.listClients().catch(() => [])),
         api.taskAssignees().catch(() => []),
       ]);
       setTasks(rows);
@@ -163,7 +164,7 @@ export default function Tasks() {
           <div style={{ fontSize: 13, color: "var(--ink-3)" }}>{t("المطلوب لكل عميل في كل شهر")}</div>
         </div>
         <div className="tat-page-actions">
-          {can("tasks", "view") && <button type="button" className="tat-btn-ghost" onClick={() => setTemplatesOpen(true)}><Icon name="sliders" size={16} /><span>{t("القوالب الشهرية")}</span></button>}
+          {can("tasks", "view") && <button type="button" className="tat-btn-ghost" onClick={() => { setTplClient(clientFilter); setTemplatesOpen(true); }}><Icon name="sliders" size={16} /><span>{t("القوالب الشهرية")}</span></button>}
           {can("tasks", "create") && <button type="button" className="tat-btn-ghost" onClick={applyDefaults}><Icon name="checkCircle" size={16} /><span>{t("التاسكات الأساسية لكل العملاء")}</span></button>}
           {can("tasks", "create") && <button type="button" className="tat-btn-ghost" onClick={generate}><Icon name="refresh" size={16} /><span>{t("توليد تاسكات الشهر")}</span></button>}
           {can("tasks", "create") && <button type="button" className="tat-btn-primary" onClick={openNew}><Icon name="plus" size={16} /><span>{t("تاسك جديد")}</span></button>}
@@ -220,7 +221,12 @@ export default function Tasks() {
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.id}>
-                    <th className="client" scope="row"><button type="button" onClick={() => setClientFilter(String(r.id) === clientFilter ? "" : String(r.id))} title={r.name}>{r.name}</button></th>
+                    <th className="client" scope="row">
+                      <div className="cname">
+                        <button type="button" onClick={() => setClientFilter(String(r.id) === clientFilter ? "" : String(r.id))} title={r.name}>{r.name}</button>
+                        {can("tasks", "view") && <button type="button" className="manage" onClick={() => { setTplClient(String(r.id)); setTemplatesOpen(true); }} aria-label={t("إدارة تاسكات العميل")} title={t("إدارة تاسكات العميل")}><Icon name="settings" size={13} /></button>}
+                      </div>
+                    </th>
                     <td className="prog"><span className="bar"><span style={{ width: `${(r.done / r.total) * 100}%` }} /></span><span className="tat-num c">{r.done}/{r.total}</span></td>
                     {columns.map((title) => {
                       const cell = r.cells[title];
@@ -257,7 +263,7 @@ export default function Tasks() {
         <TaskModal task={editing} clients={clients} people={people} canEdit={editing.id ? can("tasks", "edit") : can("tasks", "create")}
           onClose={() => setEditing(null)} onSave={save} onDelete={editing.id && can("tasks", "delete") ? () => remove(editing.id) : null} />
       )}
-      {templatesOpen && <TemplatesModal clients={clients} people={people} can={can} defaultClient={clientFilter} onClose={() => { setTemplatesOpen(false); }} />}
+      {templatesOpen && <TemplatesModal clients={clients} people={people} can={can} month={month} defaultClient={tplClient} onChanged={load} onClose={() => { setTemplatesOpen(false); }} />}
     </div>
   );
 }
@@ -331,7 +337,7 @@ function TaskModal({ task, clients, people, canEdit, onClose, onSave, onDelete }
 }
 
 // Monthly recurring templates per client ("what we owe this client every month").
-function TemplatesModal({ clients, people, can, defaultClient, onClose }) {
+function TemplatesModal({ clients, people, can, month, defaultClient, onChanged, onClose }) {
   const [clientId, setClientId] = useState(defaultClient || (clients[0] ? String(clients[0].id) : ""));
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -353,11 +359,37 @@ function TemplatesModal({ clients, people, can, defaultClient, onClose }) {
       load();
     } catch (err) { notifyError(err); }
   };
+  const current = clients.find((c) => String(c.id) === String(clientId));
+  const [enabled, setEnabled] = useState(true);
+  useEffect(() => { setEnabled(current ? current.tasks_enabled !== false : true); }, [current]);
+
+  const toggleClient = async () => {
+    try {
+      const r = await api.setTaskClientEnabled(Number(clientId), !enabled);
+      setEnabled(r.tasks_enabled);
+      current && (current.tasks_enabled = r.tasks_enabled);
+      notifySuccess(r.tasks_enabled ? t("اتفعّلت تاسكات العميل") : t("اتوقفت تاسكات العميل — مش هيتولد له تاسكات جديدة"));
+      onChanged && onChanged();
+    } catch (err) { notifyError(err); }
+  };
+  const removeClient = async () => {
+    if (!confirm(t("حذف قوالب العميل «{name}» وتاسكاته في الشهر المعروض، وإيقاف التاسكات له؟ تاسكات الشهور السابقة هتفضل. مش هيتولد له تاسكات تاني لحد ما تفعّلها.", { name: current ? current.name : "" }))) return;
+    try {
+      const r = await api.removeTaskClient(Number(clientId), month);
+      setEnabled(false);
+      current && (current.tasks_enabled = false);
+      notifySuccess(t("اتشال العميل: {a} قالب و{b} تاسك", { a: r.templates, b: r.tasks }));
+      load();
+      onChanged && onChanged();
+    } catch (err) { notifyError(err); }
+  };
   const addDefaults = async () => {
     try {
       const r = await api.seedTaskTemplates(Number(clientId));
       notifySuccess(r.created ? t("اتضاف {n} قالب أساسي", { n: r.created }) : t("القوالب الأساسية موجودة بالفعل"));
+      setEnabled(true); current && (current.tasks_enabled = true);
       load();
+      onChanged && onChanged();
     } catch (err) { notifyError(err); }
   };
   const toggle = async (x) => { try { await api.updateTaskTemplate(x.id, { active: !x.active }); load(); } catch (err) { notifyError(err); } };
@@ -374,6 +406,14 @@ function TemplatesModal({ clients, people, can, defaultClient, onClose }) {
         <select value={clientId} onChange={(e) => setClientId(e.target.value)} style={inputStyle}>
           {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
+
+        {clientId && (
+          <div className="tat-tpl-state">
+            <Badge color={enabled ? GREEN : "var(--ink-3)"}>{enabled ? t("التاسكات مفعّلة لهذا العميل") : t("التاسكات موقوفة لهذا العميل")}</Badge>
+            {can("tasks", "edit") && <button type="button" className="tat-btn-ghost" onClick={toggleClient}>{enabled ? t("إيقاف التاسكات") : t("تفعيل التاسكات")}</button>}
+            {can("tasks", "delete") && <button type="button" className="tat-btn-ghost danger" onClick={removeClient}>{t("حذف تاسكات العميل")}</button>}
+          </div>
+        )}
 
         {can("tasks", "create") && clientId && (
           <button type="button" className="tat-btn-ghost" onClick={addDefaults} style={{ marginTop: 8 }}><Icon name="checkCircle" size={16} /><span>{t("إضافة التاسكات الأساسية لهذا العميل")}</span></button>

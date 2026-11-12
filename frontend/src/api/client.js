@@ -143,6 +143,9 @@ export const api = {
   updateClient: (id, payload) => request(`/clients/${id}`, { method: "PUT", body: payload }),
   deleteClient: (id) => request(`/clients/${id}`, { method: "DELETE" }),
 
+  taskClients: () => request("/tasks/clients"),
+  setTaskClientEnabled: (id, enabled) => request(`/tasks/clients/${id}`, { method: "PUT", body: { enabled } }),
+  removeTaskClient: (id, month) => request(`/tasks/clients/${id}?month=${month}`, { method: "DELETE" }),
   listTasks: (query = "") => request(`/tasks${query ? `?${query}` : ""}`),
   taskAssignees: () => request("/tasks/assignees"),
   createTask: (payload) => request("/tasks", { method: "POST", body: payload }),
