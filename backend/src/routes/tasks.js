@@ -3,7 +3,7 @@ const pool = require("../db/pool");
 const { requireAuth, requirePermission } = require("../middleware/auth");
 const { audit, fetchBefore } = require("../lib/audit");
 const { ownsRow } = require("../lib/tenant");
-const { generateTasksForMonth, monthOf, MONTH_RE } = require("../jobs/monthlyTasks");
+const { generateTasksForMonth, seedDefaultTemplates, monthOf, MONTH_RE } = require("../jobs/monthlyTasks");
 
 const router = express.Router();
 router.use(requireAuth);
@@ -189,6 +189,21 @@ router.post("/templates", requirePermission("tasks", "create"), async (req, res)
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error creating template" });
+  }
+});
+
+// POST /api/tasks/templates/defaults { client_id? } — add the standard monthly tasks to one client, or to every active client
+router.post("/templates/defaults", requirePermission("tasks", "create"), async (req, res) => {
+  try {
+    const agencyId = req.user.agencyId;
+    const clientId = intOrNull(req.body && req.body.client_id);
+    if (Number.isNaN(clientId) || (clientId !== null && !(await ownsRow("clients", clientId, agencyId)))) return res.status(400).json({ error: "client not found" });
+    const result = await seedDefaultTemplates(agencyId, clientId);
+    audit(req, { action: "task_template.seed_defaults", entity: "task_template", entityId: null, after: result, summary: `${result.created} / ${result.clients}` });
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error adding default tasks" });
   }
 });
 

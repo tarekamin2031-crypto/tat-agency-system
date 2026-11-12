@@ -128,6 +128,17 @@ export default function Tasks() {
     } catch (err) { notifyError(err); }
   };
 
+  // One click: add the standard monthly tasks to every active client, then create this month's tasks.
+  const applyDefaults = async () => {
+    if (!confirm(t("هيتضاف التاسكات الأساسية (أفكار المحتوى، Content Plan، تصميمات، إعلانات، متابعة الإعلانات، متابعة الاسكادول، متابعة العميل) لكل العملاء النشطين، وبعدها تتولد تاسكات الشهر. أكمل؟"))) return;
+    try {
+      const s = await api.seedTaskTemplates(null);
+      const g = await api.generateTasks(month);
+      notifySuccess(t("اتضاف {t} قالب لـ {c} عميل، وتولّد {n} تاسك للشهر", { t: s.created, c: s.clients, n: g.created }));
+      load();
+    } catch (err) { notifyError(err); }
+  };
+
   const openNew = () => setEditing({ client_id: clientFilter || "", title: "", description: "", status: "todo", priority: "normal", assignee_id: "", due_date: "", notes: "", linksText: "" });
   const openEdit = (x) => setEditing({ ...x, assignee_id: x.assignee_id || "", due_date: x.due_date || "", notes: x.notes || "", description: x.description || "", linksText: (x.links || []).join("\n") });
 
@@ -140,6 +151,7 @@ export default function Tasks() {
         </div>
         <div className="tat-page-actions">
           {can("tasks", "view") && <button type="button" className="tat-btn-ghost" onClick={() => setTemplatesOpen(true)}><Icon name="sliders" size={16} /><span>{t("القوالب الشهرية")}</span></button>}
+          {can("tasks", "create") && <button type="button" className="tat-btn-ghost" onClick={applyDefaults}><Icon name="checkCircle" size={16} /><span>{t("التاسكات الأساسية لكل العملاء")}</span></button>}
           {can("tasks", "create") && <button type="button" className="tat-btn-ghost" onClick={generate}><Icon name="refresh" size={16} /><span>{t("توليد تاسكات الشهر")}</span></button>}
           {can("tasks", "create") && <button type="button" className="tat-btn-primary" onClick={openNew}><Icon name="plus" size={16} /><span>{t("تاسك جديد")}</span></button>}
         </div>
@@ -192,7 +204,7 @@ export default function Tasks() {
           {tasks.length === 0 ? (
             <EmptyBox>
               {t("مفيش تاسكات في الشهر ده.")}{" "}
-              {can("tasks", "create") ? t("ضيف قوالب شهرية لعملائك واضغط «توليد تاسكات الشهر»، أو أضف تاسك يدويًا.") : ""}
+              {can("tasks", "create") ? t("اضغط «التاسكات الأساسية لكل العملاء» عشان يتضاف المطلوب شهريًا لكل عميل ويتولد الشهر، أو أضف تاسك يدويًا.") : ""}
             </EmptyBox>
           ) : (
             <div className="tat-kanban">
@@ -351,6 +363,13 @@ function TemplatesModal({ clients, people, can, defaultClient, onClose }) {
       load();
     } catch (err) { notifyError(err); }
   };
+  const addDefaults = async () => {
+    try {
+      const r = await api.seedTaskTemplates(Number(clientId));
+      notifySuccess(r.created ? t("اتضاف {n} قالب أساسي", { n: r.created }) : t("القوالب الأساسية موجودة بالفعل"));
+      load();
+    } catch (err) { notifyError(err); }
+  };
   const toggle = async (x) => { try { await api.updateTaskTemplate(x.id, { active: !x.active }); load(); } catch (err) { notifyError(err); } };
   const remove = async (x) => {
     if (!confirm(t("حذف القالب؟ التاسكات اللي اتولدت منه قبل كده هتفضل موجودة."))) return;
@@ -365,6 +384,10 @@ function TemplatesModal({ clients, people, can, defaultClient, onClose }) {
         <select value={clientId} onChange={(e) => setClientId(e.target.value)} style={inputStyle}>
           {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
+
+        {can("tasks", "create") && clientId && (
+          <button type="button" className="tat-btn-ghost" onClick={addDefaults} style={{ marginTop: 8 }}><Icon name="checkCircle" size={16} /><span>{t("إضافة التاسكات الأساسية لهذا العميل")}</span></button>
+        )}
 
         {loading ? <LoadingBox rows={2} /> : items.length === 0 ? <EmptyBox>{t("مفيش قوالب لعميل ده لسه")}</EmptyBox> : (
           <div className="tat-tpl-list">

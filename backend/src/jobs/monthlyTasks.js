@@ -32,4 +32,34 @@ async function generateTasksForMonth(month, agencyId = null, db = pool) {
   return rows.length;
 }
 
-module.exports = { generateTasksForMonth, monthOf, MONTH_RE };
+// The standard monthly work of a social-media agency, created as templates for each client.
+const DEFAULT_TASKS = [
+  "أفكار المحتوى",
+  "Content Plan",
+  "تصميمات",
+  "إعلانات",
+  "متابعة الإعلانات",
+  "متابعة الاسكادول",
+  "متابعة العميل (ميتنج)",
+];
+
+/**
+ * Adds the default monthly templates to one client (any status) or, with no clientId, to every ACTIVE client of the
+ * agency. Titles a client already has are skipped, so it can be run again safely. Returns { created, clients }.
+ */
+async function seedDefaultTemplates(agencyId, clientId = null, db = pool) {
+  const { rows } = await db.query(
+    `INSERT INTO task_templates (agency_id, client_id, title, priority)
+     SELECT c.agency_id, c.id, d.title, 'normal'
+       FROM clients c CROSS JOIN unnest($3::text[]) WITH ORDINALITY AS d(title, ord)
+      WHERE c.agency_id = $1::int
+        AND (($2::int IS NULL AND c.contract_status = 'active') OR c.id = $2::int)
+        AND NOT EXISTS (SELECT 1 FROM task_templates tt WHERE tt.client_id = c.id AND tt.title = d.title)
+      ORDER BY c.id, d.ord
+     RETURNING client_id`,
+    [agencyId, clientId, DEFAULT_TASKS]
+  );
+  return { created: rows.length, clients: new Set(rows.map((r) => r.client_id)).size };
+}
+
+module.exports = { generateTasksForMonth, seedDefaultTemplates, DEFAULT_TASKS, monthOf, MONTH_RE };

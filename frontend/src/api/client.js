@@ -151,6 +151,7 @@ export const api = {
   generateTasks: (month) => request("/tasks/generate", { method: "POST", body: { month } }),
   listTaskTemplates: (query = "") => request(`/tasks/templates${query ? `?${query}` : ""}`),
   createTaskTemplate: (payload) => request("/tasks/templates", { method: "POST", body: payload }),
+  seedTaskTemplates: (clientId = null) => request("/tasks/templates/defaults", { method: "POST", body: { client_id: clientId } }),
   updateTaskTemplate: (id, payload) => request(`/tasks/templates/${id}`, { method: "PUT", body: payload }),
   deleteTaskTemplate: (id) => request(`/tasks/templates/${id}`, { method: "DELETE" }),
 
