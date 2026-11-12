@@ -4,6 +4,7 @@ const cron = require("node-cron");
 const app = require("./app");
 const { generateMonthlyInvoices } = require("./jobs/monthlyInvoices");
 const { runDailyEvents } = require("./jobs/dailyEvents");
+const { generateTasksForMonth, monthOf } = require("./jobs/monthlyTasks");
 const { processWebhookQueue } = require("./lib/webhooks");
 const { processEmailQueue } = require("./lib/mailer");
 
@@ -20,6 +21,13 @@ cron.schedule("5 0 1 * *", () => {
   generateMonthlyInvoices()
     .then((created) => console.log(`[monthly-invoices] Generated ${created.length} invoice(s).`))
     .catch((err) => console.error("[monthly-invoices] Failed:", err));
+});
+
+// Same moment: create this month's client tasks from the monthly templates (idempotent).
+cron.schedule("10 0 1 * *", () => {
+  generateTasksForMonth(monthOf())
+    .then((n) => console.log(`[monthly-tasks] Generated ${n} task(s).`))
+    .catch((err) => console.error("[monthly-tasks] Failed:", err));
 });
 
 // 07:00 every day: announce newly overdue invoices and renewals due within a week

@@ -11,6 +11,7 @@ export const MODULE_LABELS = {
   get collection() { return t("التحصيل والمدفوعات"); },
   get ad_budgets() { return t("إعلانات العملاء"); },
   get services() { return t("الخدمات"); },
+  get tasks() { return t("التاسكات"); },
   get reports() { return t("التقارير والتحليلات"); },
   get team() { return t("الفريق"); },
   get settings() { return t("إعدادات الشركة"); },
@@ -21,7 +22,7 @@ export const ACTION_LABELS = { get view() { return t("عرض"); }, get create() 
 
 const ENTITY_LABELS = {
   get client() { return t("عميل"); }, get invoice() { return t("فاتورة"); }, get expense() { return t("مصروف"); }, get collection() { return t("تحصيل"); }, get collection_entry() { return t("سجل تحصيل"); },
-  get ad_budget() { return t("إعلان عميل"); }, get service() { return t("خدمة"); }, get settings() { return t("الإعدادات"); }, get company_settings() { return t("إعدادات الشركة"); },
+  get ad_budget() { return t("إعلان عميل"); }, get service() { return t("خدمة"); }, get task() { return t("تاسك"); }, get task_template() { return t("قالب تاسك شهري"); }, get settings() { return t("الإعدادات"); }, get company_settings() { return t("إعدادات الشركة"); },
   get webhook() { return t("Webhook"); }, get email_settings() { return t("إعدادات البريد"); }, get platform() { return t("المنصة"); },
   get auth() { return t("الحساب"); }, get user() { return t("مستخدم"); }, get role() { return t("دور"); }, get profile() { return t("الملف الشخصي"); }, get permission() { return t("الصلاحيات"); }, get agency() { return t("وكالة"); },
 };

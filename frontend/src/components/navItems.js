@@ -14,6 +14,7 @@ export const NAV_GROUPS = [
     get label() { return t("العملاء"); },
     items: [
       { to: "/clients", get label() { return t("العملاء"); }, icon: "users", perm: ["clients"] },
+      { to: "/tasks", get label() { return t("التاسكات"); }, icon: "checkCircle", perm: ["tasks"] },
       { to: "/client-profitability", get label() { return t("ربحية العملاء"); }, icon: "trend", perm: ["reports"] },
       { to: "/client-health", get label() { return t("صحة العملاء"); }, icon: "pulse", perm: ["reports"] },
       { to: "/renewal-analytics", get label() { return t("تحليلات التجديد"); }, icon: "refresh", perm: ["reports"] },

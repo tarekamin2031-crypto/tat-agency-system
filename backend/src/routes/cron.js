@@ -4,6 +4,7 @@ const { runDailyEvents } = require("../jobs/dailyEvents");
 const { generateMonthlyInvoices } = require("../jobs/monthlyInvoices");
 const { processWebhookQueue } = require("../lib/webhooks");
 const { processEmailQueue } = require("../lib/mailer");
+const { generateTasksForMonth, monthOf } = require("../jobs/monthlyTasks");
 
 // Called by Vercel Cron (it sends "Authorization: Bearer $CRON_SECRET"). Not usable without that secret.
 const router = express.Router();
@@ -25,6 +26,7 @@ router.get("/daily", requireCronSecret, async (req, res) => {
   try { out.emails = await processEmailQueue(); } catch (e) { out.emails = { error: e.message }; }
   if (new Date().getUTCDate() === 1 || req.query.monthly === "1") {
     try { out.monthlyInvoices = (await generateMonthlyInvoices()).length; } catch (e) { out.monthlyInvoices = { error: e.message }; }
+    try { out.monthlyTasks = await generateTasksForMonth(monthOf()); } catch (e) { out.monthlyTasks = { error: e.message }; }
   }
   res.json({ ok: true, ...out });
 });

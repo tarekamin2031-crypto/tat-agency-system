@@ -642,3 +642,47 @@ html[dir="ltr"] .tat-pop { left: auto; right: 0; }
   .tat-content > div[style*="padding: 28px"] { padding: 22px !important; }
 }
 .tat-modal-head .tat-icon-btn { flex: 0 0 auto; width: 36px; height: 36px; padding: 0; }
+
+/* ---- Tasks page (kanban per month) ---- */
+.tat-task-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 16px; }
+.tat-task-month { display: flex; align-items: center; gap: 6px; }
+.tat-task-month .label { min-width: 120px; text-align: center; font-weight: 700; font-size: 15px; }
+.tat-task-clients { display: flex; gap: 8px; flex-wrap: wrap; margin: -8px 0 18px; }
+.tat-task-clients .chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-1); color: var(--ink); font: inherit; font-size: 12.5px; cursor: pointer; }
+.tat-task-clients .chip:hover { border-color: var(--border-strong); }
+.tat-task-clients .chip.on { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 12%, transparent); }
+.tat-task-clients .bar { width: 38px; height: 4px; border-radius: 2px; background: var(--border); overflow: hidden; }
+.tat-task-clients .bar span { display: block; height: 100%; background: var(--green); }
+.tat-task-clients .c { color: var(--ink-3); }
+.tat-kanban { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: start; margin-bottom: 24px; }
+@media (max-width: 900px) { .tat-kanban { grid-template-columns: 1fr; } }
+.tat-kcol { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; padding: 10px; min-height: 120px; transition: border-color .15s, background .15s; }
+.tat-kcol.over { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 6%, var(--surface-1)); }
+.tat-kcol-head { display: flex; align-items: center; gap: 8px; font-weight: 700; padding: 4px 6px 10px; }
+.tat-kcol-head .count { margin-inline-start: auto; color: var(--ink-3); font-weight: 600; font-size: 12.5px; }
+.tat-kcol-empty { text-align: center; color: var(--ink-3); font-size: 12.5px; padding: 18px 0; }
+.tat-tcard { background: var(--surface); border: 1px solid var(--border); border-radius: 11px; padding: 10px 12px; margin-bottom: 8px; cursor: pointer; box-shadow: var(--shadow-card); transition: border-color .15s, transform .15s; }
+.tat-tcard:hover { border-color: var(--border-strong); }
+.tat-tcard:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.tat-tcard.dragging { opacity: .45; transform: scale(.98); }
+.tat-tcard .client { font-size: 11.5px; color: var(--ink-3); }
+.tat-tcard .title { font-size: 13.5px; font-weight: 600; margin: 2px 0 7px; line-height: 1.5; }
+.tat-tcard.done .title { text-decoration: line-through; color: var(--ink-3); }
+.tat-tcard .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 11.5px; color: var(--ink-3); }
+.tat-tcard .meta .due, .tat-tcard .meta .who { display: inline-flex; align-items: center; gap: 4px; }
+.tat-tcard .meta .due.late { color: var(--red); font-weight: 600; }
+.tat-tcard .move { display: flex; gap: 6px; margin-top: 8px; }
+.tat-tcard .move button { font: inherit; font-size: 11.5px; padding: 2px 10px; border-radius: 7px; border: 1px solid var(--border); background: transparent; color: var(--ink-2); cursor: pointer; }
+.tat-tcard .move button:hover { border-color: var(--border-strong); color: var(--ink); }
+.tat-tcard .move button.fwd { margin-inline-start: auto; }
+.tat-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.tat-form-row.three { grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+@media (max-width: 560px) { .tat-form-row, .tat-form-row.three { grid-template-columns: 1fr; } }
+.tat-task-links { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; font-size: 12.5px; }
+.tat-task-links a { color: var(--brand); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tat-tpl-list { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; }
+.tat-tpl-list .row { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-1); }
+.tat-tpl-list .row.off { opacity: .55; }
+.tat-tpl-list .t { font-weight: 600; flex: 1; min-width: 0; }
+.tat-tpl-list .m { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--ink-3); }
+.tat-tpl-add { border-top: 1px solid var(--border); margin-top: 8px; padding-top: 4px; }

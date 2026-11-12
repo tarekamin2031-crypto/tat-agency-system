@@ -4,7 +4,7 @@
 
 const MODULES = [
   "dashboard", "clients", "invoices", "expenses", "personal_expenses",
-  "collection", "ad_budgets", "services", "reports", "team", "settings", "logs",
+  "collection", "ad_budgets", "services", "tasks", "reports", "team", "settings", "logs",
 ];
 const ACTIONS = ["view", "create", "edit", "delete", "export"];
 
@@ -28,19 +28,19 @@ const DEFAULT_ROLES = [
     key: "account_manager", name: "مدير حسابات", description: "العملاء والتحصيل والفواتير بدون المصاريف والتقارير.",
     permissions: pick({
       dashboard: "view", clients: "view,create,edit", invoices: "view,create,edit", collection: "view,create,edit",
-      ad_budgets: "view", services: "view",
+      ad_budgets: "view", services: "view", tasks: "view,create,edit",
     }),
   },
   {
     key: "member", name: "عضو", description: "تشغيل كامل للأقسام الأساسية بدون الفريق والإعدادات والسجل والمصاريف الشخصية.",
     permissions: pick({
-      dashboard: "*", clients: "*", invoices: "*", expenses: "*", collection: "*", ad_budgets: "*", services: "*", reports: "*",
+      dashboard: "*", clients: "*", invoices: "*", expenses: "*", collection: "*", ad_budgets: "*", services: "*", tasks: "*", reports: "*",
     }),
   },
   {
     key: "viewer", name: "عرض فقط", description: "يشوف الأقسام الأساسية بدون أي تعديل.",
     permissions: pick({
-      dashboard: "view", clients: "view", invoices: "view", collection: "view", ad_budgets: "view", services: "view", reports: "view",
+      dashboard: "view", clients: "view", invoices: "view", collection: "view", ad_budgets: "view", services: "view", tasks: "view", reports: "view",
     }),
   },
 ];

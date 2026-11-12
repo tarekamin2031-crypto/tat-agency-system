@@ -5,5 +5,7 @@ import part3 from "./en.part3";
 import part4 from "./en.part4";
 import part5 from "./en.part5";
 import part6 from "./en.part6";
+import part7 from "./en.part7";
 
-export default { ...part1, ...part2, ...part3, ...part4, ...part5, ...part6 };
+// part7 first so existing translations in parts 1-6 are never overridden
+export default { ...part7, ...part1, ...part2, ...part3, ...part4, ...part5, ...part6 };

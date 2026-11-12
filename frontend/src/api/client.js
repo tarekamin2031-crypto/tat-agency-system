@@ -143,6 +143,17 @@ export const api = {
   updateClient: (id, payload) => request(`/clients/${id}`, { method: "PUT", body: payload }),
   deleteClient: (id) => request(`/clients/${id}`, { method: "DELETE" }),
 
+  listTasks: (query = "") => request(`/tasks${query ? `?${query}` : ""}`),
+  taskAssignees: () => request("/tasks/assignees"),
+  createTask: (payload) => request("/tasks", { method: "POST", body: payload }),
+  updateTask: (id, payload) => request(`/tasks/${id}`, { method: "PUT", body: payload }),
+  deleteTask: (id) => request(`/tasks/${id}`, { method: "DELETE" }),
+  generateTasks: (month) => request("/tasks/generate", { method: "POST", body: { month } }),
+  listTaskTemplates: (query = "") => request(`/tasks/templates${query ? `?${query}` : ""}`),
+  createTaskTemplate: (payload) => request("/tasks/templates", { method: "POST", body: payload }),
+  updateTaskTemplate: (id, payload) => request(`/tasks/templates/${id}`, { method: "PUT", body: payload }),
+  deleteTaskTemplate: (id) => request(`/tasks/templates/${id}`, { method: "DELETE" }),
+
   listServices: () => request("/services"),
   createService: (payload) => request("/services", { method: "POST", body: payload }),
   updateService: (id, payload) => request(`/services/${id}`, { method: "PUT", body: payload }),

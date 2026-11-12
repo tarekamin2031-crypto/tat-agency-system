@@ -18,6 +18,7 @@ const emailRoutes = require("./routes/email");
 const webhookRoutes = require("./routes/webhooks");
 const publicRoutes = require("./routes/public");
 const cronRoutes = require("./routes/cron");
+const taskRoutes = require("./routes/tasks");
 const { securityHeaders } = require("./middleware/security");
 
 // The Express app only (no listen, no timers) so it can run both as a long-lived server (Docker/Render/VPS)
@@ -54,6 +55,7 @@ app.use("/api/email", emailRoutes);
 app.use("/api/webhooks", webhookRoutes);
 app.use("/api/public", publicRoutes);
 app.use("/api/cron", cronRoutes);
+app.use("/api/tasks", taskRoutes);
 
 // generic error handler
 app.use((err, req, res, next) => {

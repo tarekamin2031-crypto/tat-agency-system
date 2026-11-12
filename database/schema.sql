@@ -554,3 +554,51 @@ CREATE TABLE IF NOT EXISTS leads (
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_leads_status_time ON leads(status, created_at DESC);
+
+-- Tasks: monthly work per client. `task_templates` hold the recurring "what we owe this client every month";
+-- `tasks` are the actual items of one month (generated from templates on the 1st, or added by hand).
+CREATE TABLE IF NOT EXISTS task_templates (
+    id           SERIAL PRIMARY KEY,
+    agency_id    INTEGER NOT NULL REFERENCES agencies(id) ON DELETE CASCADE,
+    client_id    INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    title        VARCHAR(200) NOT NULL,
+    description  TEXT,
+    priority     VARCHAR(10) NOT NULL DEFAULT 'normal',   -- normal | high | urgent
+    assignee_id  INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    due_day      INTEGER,                                  -- day of month (1-31), NULL = no due date
+    active       BOOLEAN NOT NULL DEFAULT true,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_task_templates_agency_client ON task_templates(agency_id, client_id);
+
+CREATE TABLE IF NOT EXISTS tasks (
+    id            SERIAL PRIMARY KEY,
+    agency_id     INTEGER NOT NULL REFERENCES agencies(id) ON DELETE CASCADE,
+    client_id     INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    template_id   INTEGER REFERENCES task_templates(id) ON DELETE SET NULL,
+    month         CHAR(7) NOT NULL,                        -- 'YYYY-MM'
+    title         VARCHAR(200) NOT NULL,
+    description   TEXT,
+    status        VARCHAR(10) NOT NULL DEFAULT 'todo',     -- todo | doing | done
+    priority      VARCHAR(10) NOT NULL DEFAULT 'normal',   -- normal | high | urgent
+    assignee_id   INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    due_date      DATE,
+    notes         TEXT,
+    links         JSONB NOT NULL DEFAULT '[]'::jsonb,      -- array of URLs
+    completed_at  TIMESTAMPTZ,
+    created_by    INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_tasks_agency_month ON tasks(agency_id, month);
+CREATE INDEX IF NOT EXISTS idx_tasks_client ON tasks(client_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_tasks_template_month ON tasks(template_id, month) WHERE template_id IS NOT NULL;
+
+-- Existing agencies get the new "tasks" permission on their built-in roles (only when not set yet).
+UPDATE roles SET permissions = permissions || '{"tasks":["view","create","edit","delete","export"]}'::jsonb
+  WHERE is_system AND key IN ('agency_admin','member') AND NOT (permissions ? 'tasks');
+UPDATE roles SET permissions = permissions || '{"tasks":["view","create","edit"]}'::jsonb
+  WHERE is_system AND key = 'account_manager' AND NOT (permissions ? 'tasks');
+UPDATE roles SET permissions = permissions || '{"tasks":["view"]}'::jsonb
+  WHERE is_system AND key = 'viewer' AND NOT (permissions ? 'tasks');

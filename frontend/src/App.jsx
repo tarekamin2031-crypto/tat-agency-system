@@ -19,6 +19,7 @@ const Clients = lazy(() => import("./pages/Clients"));
 const Invoices = lazy(() => import("./pages/Invoices"));
 const Salaries = lazy(() => import("./pages/Salaries"));
 const Collection = lazy(() => import("./pages/Collection"));
+const Tasks = lazy(() => import("./pages/Tasks"));
 const AdBudgets = lazy(() => import("./pages/AdBudgets"));
 const ClientProfitability = lazy(() => import("./pages/ClientProfitability"));
 const ServiceAnalytics = lazy(() => import("./pages/ServiceAnalytics"));
@@ -35,7 +36,7 @@ const PlatformLogs = lazy(() => import("./pages/PlatformLogs"));
 
 // Which modules unlock each page (kept in sync with components/navItems.js).
 const ROUTE_PERMS = {
-  "/dashboard": ["dashboard"], "/alerts": ["dashboard", "reports"], "/clients": ["clients"],
+  "/dashboard": ["dashboard"], "/alerts": ["dashboard", "reports"], "/clients": ["clients"], "/tasks": ["tasks"],
   "/client-profitability": ["reports"], "/client-health": ["reports"], "/renewal-analytics": ["reports"],
   "/invoices": ["invoices", "expenses", "personal_expenses"], "/salaries": ["expenses"], "/collection": ["collection"],
   "/ad-budgets": ["ad_budgets"], "/cash-flow-forecast": ["reports"], "/service-analytics": ["reports"], "/manage-services": ["services"],
@@ -76,7 +77,7 @@ function StartRedirect() {
   const user = getStoredUser();
   const wanted = readPrefsCache().startPage;
   // Only honour the chosen start page if this role may open it.
-  const startItem = wanted && ["/dashboard","/alerts","/clients","/invoices","/salaries","/collection","/ad-budgets","/cash-flow-forecast","/service-analytics","/manage-services","/client-profitability","/client-health","/renewal-analytics"].includes(wanted);
+  const startItem = wanted && ["/dashboard","/alerts","/clients","/tasks","/invoices","/salaries","/collection","/ad-budgets","/cash-flow-forecast","/service-analytics","/manage-services","/client-profitability","/client-health","/renewal-analytics"].includes(wanted);
   const target = startItem && ROUTE_PERMS[wanted] && canAny(user, ROUTE_PERMS[wanted]) ? wanted : firstAllowedPath(user);
   return <Navigate to={target} replace />;
 }
@@ -104,6 +105,7 @@ export default function App() {
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/dashboard" element={<Protected perm={["dashboard"]}><Dashboard /></Protected>} />
           <Route path="/clients" element={<Protected perm={["clients"]}><Clients /></Protected>} />
+          <Route path="/tasks" element={<Protected perm={["tasks"]}><Tasks /></Protected>} />
           <Route path="/invoices" element={<Protected perm={["invoices", "expenses", "personal_expenses"]}><Invoices /></Protected>} />
           <Route path="/salaries" element={<Protected perm={["expenses"]}><Salaries /></Protected>} />
           <Route path="/collection" element={<Protected perm={["collection"]}><Collection /></Protected>} />
