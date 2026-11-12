@@ -1,17 +1,20 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { api, notifyError, notifySuccess } from "../api/client";
-import { GOLD, TEAL, RED, GREEN, ORANGE, inputStyle, btnStyle } from "../theme";
+import { GOLD, RED, GREEN, ORANGE, inputStyle, btnStyle } from "../theme";
 import { Overlay, ModalShell, FieldLabel } from "../components/Modal";
-import { EmptyBox, LoadingBox, StatCard, Badge } from "../components/Bits";
+import { EmptyBox, LoadingBox, Badge } from "../components/Bits";
 import Icon from "../components/Icons";
 import { useAccount } from "../context/AccountContext";
 import { t, monthNames } from "../i18n";
 
 const STATUSES = ["todo", "doing", "done"];
+const NEXT = { todo: "doing", doing: "done", done: "todo" };
 const STATUS_LABEL = { get todo() { return t("جديد"); }, get doing() { return t("جاري"); }, get done() { return t("تم"); } };
 const STATUS_COLOR = { todo: "var(--ink-3)", doing: ORANGE, done: GREEN };
 const PRIORITY_LABEL = { get normal() { return t("عادية"); }, get high() { return t("مهمة"); }, get urgent() { return t("عاجلة"); } };
 const PRIORITY_COLOR = { normal: "var(--ink-3)", high: ORANGE, urgent: RED };
+// Column order of the standard tasks; anything else (custom titles) follows alphabetically.
+const STANDARD_ORDER = ["أفكار المحتوى", "Content Plan", "تصميمات", "إعلانات", "متابعة الإعلانات", "متابعة الاسكادول", "متابعة العميل (ميتنج)"];
 
 const pad = (n) => String(n).padStart(2, "0");
 const currentMonth = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`; };
@@ -26,6 +29,7 @@ function monthLabel(m) {
   return `${monthNames()[mo - 1]} ${y}`;
 }
 const isOverdue = (task) => task.status !== "done" && task.due_date && task.due_date < todayISO();
+const initials = (name) => String(name || "").trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 
 export default function Tasks() {
   const { can } = useAccount();
@@ -39,8 +43,6 @@ export default function Tasks() {
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState(null); // task object (id => edit, no id => new)
   const [templatesOpen, setTemplatesOpen] = useState(false);
-  const [dragId, setDragId] = useState(null);
-  const [overCol, setOverCol] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -65,20 +67,23 @@ export default function Tasks() {
     const q = query.trim().toLowerCase();
     return tasks.filter((x) => (!clientFilter || String(x.client_id) === clientFilter)
       && (!assigneeFilter || (assigneeFilter === "none" ? !x.assignee_id : String(x.assignee_id) === assigneeFilter))
-      && (!q || `${x.title} ${x.client_name} ${x.description || ""}`.toLowerCase().includes(q)));
+      && (!q || `${x.title} ${x.client_name}`.toLowerCase().includes(q)));
   }, [tasks, clientFilter, assigneeFilter, query]);
 
-  // per-client progress (over the month's tasks, ignoring the client filter so the strip stays usable)
-  const progress = useMemo(() => {
-    const map = new Map();
-    tasks.forEach((x) => {
-      if (assigneeFilter && (assigneeFilter === "none" ? x.assignee_id : String(x.assignee_id) !== assigneeFilter)) return;
-      const e = map.get(x.client_id) || { id: x.client_id, name: x.client_name, total: 0, done: 0 };
+  // Matrix: rows = clients that have tasks this month, columns = distinct task titles.
+  const { columns, rows } = useMemo(() => {
+    const titles = [...new Set(visible.map((x) => x.title))];
+    const rank = (ti) => { const i = STANDARD_ORDER.indexOf(ti); return i === -1 ? 1000 : i; };
+    titles.sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+    const byClient = new Map();
+    visible.forEach((x) => {
+      const e = byClient.get(x.client_id) || { id: x.client_id, name: x.client_name, cells: {}, total: 0, done: 0 };
+      (e.cells[x.title] = e.cells[x.title] || []).push(x);
       e.total += 1; if (x.status === "done") e.done += 1;
-      map.set(x.client_id, e);
+      byClient.set(x.client_id, e);
     });
-    return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
-  }, [tasks, assigneeFilter]);
+    return { columns: titles, rows: [...byClient.values()].sort((a, b) => a.name.localeCompare(b.name)) };
+  }, [visible]);
 
   const total = visible.length;
   const done = visible.filter((x) => x.status === "done").length;
@@ -86,7 +91,6 @@ export default function Tasks() {
   const overdue = visible.filter(isOverdue).length;
 
   const changeStatus = async (task, status) => {
-    if (task.status === status) return;
     const prev = tasks;
     setTasks((list) => list.map((x) => (x.id === task.id ? { ...x, status } : x))); // optimistic
     try {
@@ -96,6 +100,13 @@ export default function Tasks() {
       setTasks(prev);
       notifyError(err);
     }
+  };
+
+  const addCell = async (client, title) => {
+    try {
+      await api.createTask({ client_id: client.id, month, title });
+      load();
+    } catch (err) { notifyError(err); }
   };
 
   const save = async (form) => {
@@ -142,6 +153,8 @@ export default function Tasks() {
   const openNew = () => setEditing({ client_id: clientFilter || "", title: "", description: "", status: "todo", priority: "normal", assignee_id: "", due_date: "", notes: "", linksText: "" });
   const openEdit = (x) => setEditing({ ...x, assignee_id: x.assignee_id || "", due_date: x.due_date || "", notes: x.notes || "", description: x.description || "", linksText: (x.links || []).join("\n") });
 
+  const canEdit = can("tasks", "edit");
+
   return (
     <div style={{ padding: 28 }}>
       <div className="tat-page-head">
@@ -180,62 +193,63 @@ export default function Tasks() {
         </div>
       </div>
 
-      {loading ? <LoadingBox rows={3} /> : (
+      {loading ? <LoadingBox rows={3} /> : tasks.length === 0 ? (
+        <EmptyBox>
+          {t("مفيش تاسكات في الشهر ده.")}{" "}
+          {can("tasks", "create") ? t("اضغط «التاسكات الأساسية لكل العملاء» عشان يتضاف المطلوب شهريًا لكل عميل ويتولد الشهر، أو أضف تاسك يدويًا.") : ""}
+        </EmptyBox>
+      ) : (
         <>
-          <div className="tat-bento tat-rise">
-            <div className="span-3"><StatCard icon="checkCircle" label={t("إجمالي التاسكات")} value={total} color={TEAL} /></div>
-            <div className="span-3"><StatCard icon="activity" label={t("جاري")} value={doing} color={ORANGE} /></div>
-            <div className="span-3"><StatCard icon="checkCircle" label={t("تم")} value={done} sub={total ? `${Math.round((done / total) * 100)}%` : undefined} color={GREEN} /></div>
-            <div className="span-3"><StatCard icon="clock" label={t("متأخرة")} value={overdue} color={overdue ? RED : "var(--ink-3)"} /></div>
+          <div className="tat-task-summary">
+            <span><b className="tat-num">{total}</b>{t("إجمالي التاسكات")}</span>
+            <span><i style={{ background: ORANGE }} /><b className="tat-num">{doing}</b>{t("جاري")}</span>
+            <span><i style={{ background: GREEN }} /><b className="tat-num">{done}</b>{t("تم")}{total ? ` (${Math.round((done / total) * 100)}%)` : ""}</span>
+            <span><i style={{ background: overdue ? RED : "var(--ink-3)" }} /><b className="tat-num">{overdue}</b>{t("متأخرة")}</span>
+            <span className="legend"><i className="s-todo" />{t("جديد")} <i className="s-doing" />{t("جاري")} <i className="s-done" />{t("تم")} — {t("اضغط الخلية لتغيير الحالة")}</span>
           </div>
 
-          {progress.length > 0 && (
-            <div className="tat-task-clients" role="list">
-              {progress.map((p) => (
-                <button key={p.id} type="button" role="listitem" className={`chip${String(p.id) === clientFilter ? " on" : ""}`} onClick={() => setClientFilter(String(p.id) === clientFilter ? "" : String(p.id))}>
-                  <span className="n">{p.name}</span>
-                  <span className="bar"><span style={{ width: `${(p.done / p.total) * 100}%` }} /></span>
-                  <span className="c tat-num">{p.done}/{p.total}</span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {tasks.length === 0 ? (
-            <EmptyBox>
-              {t("مفيش تاسكات في الشهر ده.")}{" "}
-              {can("tasks", "create") ? t("اضغط «التاسكات الأساسية لكل العملاء» عشان يتضاف المطلوب شهريًا لكل عميل ويتولد الشهر، أو أضف تاسك يدويًا.") : ""}
-            </EmptyBox>
-          ) : (
-            <div className="tat-kanban">
-              {STATUSES.map((st) => {
-                const col = visible.filter((x) => x.status === st);
-                return (
-                  <div
-                    key={st}
-                    className={`tat-kcol${overCol === st ? " over" : ""}`}
-                    onDragOver={(e) => { if (can("tasks", "edit")) { e.preventDefault(); setOverCol(st); } }}
-                    onDragLeave={() => setOverCol((c) => (c === st ? null : c))}
-                    onDrop={(e) => { e.preventDefault(); setOverCol(null); const task = tasks.find((x) => x.id === dragId); setDragId(null); if (task && can("tasks", "edit")) changeStatus(task, st); }}
-                  >
-                    <div className="tat-kcol-head">
-                      <span className="tat-dot" style={{ background: STATUS_COLOR[st] }} />
-                      <span className="name">{STATUS_LABEL[st]}</span>
-                      <span className="count tat-num">{col.length}</span>
-                    </div>
-                    <div className="tat-kcol-body">
-                      {col.length === 0 && <div className="tat-kcol-empty">{t("لا يوجد")}</div>}
-                      {col.map((x) => (
-                        <TaskCard key={x.id} task={x} canEdit={can("tasks", "edit")} dragging={dragId === x.id}
-                          onDragStart={() => setDragId(x.id)} onDragEnd={() => { setDragId(null); setOverCol(null); }}
-                          onOpen={() => openEdit(x)} onMove={(s) => changeStatus(x, s)} />
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <div className="tat-matrix-wrap">
+            <table className="tat-matrix">
+              <thead>
+                <tr>
+                  <th className="client">{t("العميل")}</th>
+                  <th className="prog">{t("التقدّم")}</th>
+                  {columns.map((c) => <th key={c}><span>{c}</span></th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.id}>
+                    <th className="client" scope="row"><button type="button" onClick={() => setClientFilter(String(r.id) === clientFilter ? "" : String(r.id))} title={r.name}>{r.name}</button></th>
+                    <td className="prog"><span className="bar"><span style={{ width: `${(r.done / r.total) * 100}%` }} /></span><span className="tat-num c">{r.done}/{r.total}</span></td>
+                    {columns.map((title) => {
+                      const cell = r.cells[title];
+                      if (!cell) {
+                        return <td key={title} className="empty">{can("tasks", "create") ? <button type="button" className="add" onClick={() => addCell(r, title)} aria-label={t("إضافة")} title={t("إضافة")}>+</button> : <span>—</span>}</td>;
+                      }
+                      return (
+                        <td key={title}>
+                          {cell.map((x) => (
+                            <div key={x.id} className={`cell s-${x.status}${isOverdue(x) ? " late" : ""}`}>
+                              <button type="button" className="st" disabled={!canEdit} onClick={() => changeStatus(x, NEXT[x.status])}
+                                title={`${STATUS_LABEL[x.status]}${x.due_date ? ` · ${x.due_date}` : ""}${x.assignee_name ? ` · ${x.assignee_name}` : ""}`}
+                                aria-label={`${x.title} — ${STATUS_LABEL[x.status]}`}>
+                                <Icon name={x.status === "done" ? "check" : x.status === "doing" ? "clock" : "minus"} size={14} />
+                              </button>
+                              <button type="button" className="more" onClick={() => openEdit(x)} aria-label={t("تفاصيل")} title={t("تفاصيل")}>
+                                {x.assignee_name ? <span className="who">{initials(x.assignee_name)}</span> : <Icon name="settings" size={12} />}
+                                {x.priority !== "normal" && <i className="pri" style={{ background: PRIORITY_COLOR[x.priority] }} />}
+                              </button>
+                            </div>
+                          ))}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
 
@@ -244,30 +258,6 @@ export default function Tasks() {
           onClose={() => setEditing(null)} onSave={save} onDelete={editing.id && can("tasks", "delete") ? () => remove(editing.id) : null} />
       )}
       {templatesOpen && <TemplatesModal clients={clients} people={people} can={can} defaultClient={clientFilter} onClose={() => { setTemplatesOpen(false); }} />}
-    </div>
-  );
-}
-
-function TaskCard({ task, canEdit, dragging, onDragStart, onDragEnd, onOpen, onMove }) {
-  const idx = STATUSES.indexOf(task.status);
-  const overdue = isOverdue(task);
-  return (
-    <div className={`tat-tcard${dragging ? " dragging" : ""}${task.status === "done" ? " done" : ""}`} draggable={canEdit} onDragStart={onDragStart} onDragEnd={onDragEnd}
-      role="button" tabIndex={0} onClick={onOpen} onKeyDown={(e) => { if (e.key === "Enter") onOpen(); }}>
-      <div className="client">{task.client_name}</div>
-      <div className="title">{task.title}</div>
-      <div className="meta">
-        {task.priority !== "normal" && <Badge color={PRIORITY_COLOR[task.priority]}>{PRIORITY_LABEL[task.priority]}</Badge>}
-        {task.due_date && <span className={`due${overdue ? " late" : ""}`}><Icon name="calendar" size={12} />{task.due_date.slice(5).replace("-", "/")}</span>}
-        {task.assignee_name && <span className="who"><Icon name="users" size={12} />{task.assignee_name}</span>}
-        {(task.links || []).length > 0 && <span className="who"><Icon name="download" size={12} />{task.links.length}</span>}
-      </div>
-      {canEdit && (
-        <div className="move" onClick={(e) => e.stopPropagation()}>
-          {idx > 0 && <button type="button" onClick={() => onMove(STATUSES[idx - 1])}>{STATUS_LABEL[STATUSES[idx - 1]]}</button>}
-          {idx < STATUSES.length - 1 && <button type="button" className="fwd" onClick={() => onMove(STATUSES[idx + 1])}>{STATUS_LABEL[STATUSES[idx + 1]]}</button>}
-        </div>
-      )}
     </div>
   );
 }

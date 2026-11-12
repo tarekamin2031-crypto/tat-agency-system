@@ -65,6 +65,10 @@ export default {
   "متابعة الإعلانات": "Ads follow-up",
   "متابعة الاسكادول": "Schedule follow-up",
   "متابعة العميل (ميتنج)": "Client follow-up (meeting)",
+  "اضغط الخلية لتغيير الحالة": "click a cell to change its status",
+  "التقدّم": "Progress",
+  "إضافة": "Add",
+  "تفاصيل": "Details",
   "قالب تاسك شهري": "Monthly task template",
   "تاسك": "Task",
 };
