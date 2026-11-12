@@ -82,6 +82,9 @@ export default {
   "تفعيل/إيقاف تاسكات العميل": "Tasks on/off for client",
   "إزالة العميل من التاسكات": "Client removed from tasks",
   "إضافة التاسكات الأساسية": "Standard tasks added",
+  "طريقة العرض": "View",
+  "كروت": "Cards",
+  "جدول": "Table",
   "قالب تاسك شهري": "Monthly task template",
   "تاسك": "Task",
 };

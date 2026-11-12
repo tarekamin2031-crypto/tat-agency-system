@@ -701,3 +701,37 @@ html[dir="ltr"] .tat-pop { left: auto; right: 0; }
 .tat-tpl-state { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 10px 0 2px; }
 .tat-btn-ghost.danger { color: var(--red); }
 .tat-tpl-add { border-top: 1px solid var(--border); margin-top: 8px; padding-top: 4px; }
+
+/* ---- Tasks: client cards view ---- */
+.tat-viewtoggle { display: inline-flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-inline-start: auto; }
+.tat-viewtoggle button { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 0; background: transparent; color: var(--ink-2); font: inherit; font-size: 12.5px; cursor: pointer; }
+.tat-viewtoggle button.on { background: var(--surface-1); color: var(--ink); font-weight: 700; }
+.tat-cclients { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; margin-bottom: 24px; }
+.tat-ccard { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px; box-shadow: var(--shadow-card); }
+.tat-ccard.complete { border-color: color-mix(in srgb, var(--green) 45%, var(--border)); }
+.tat-ccard .head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.tat-ccard .ring { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+.tat-ccard .ring > span { width: 36px; height: 36px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; font-size: 11px; font-weight: 700; }
+.tat-ccard .who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.tat-ccard .name { background: none; border: 0; padding: 0; font: inherit; font-weight: 700; font-size: 14.5px; color: var(--ink); text-align: start; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tat-ccard .name:hover { color: var(--brand); }
+.tat-ccard .sub { font-size: 12px; color: var(--ink-3); }
+.tat-ccard .sub .late { color: var(--red); font-weight: 600; }
+.tat-ccard .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.tchip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 2px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-1); font-size: 12px; max-width: 100%; position: relative; }
+.tchip .st { width: 22px; height: 22px; border-radius: 7px; border: 0; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; background: color-mix(in srgb, var(--ink-3) 14%, transparent); color: var(--ink-3); flex: none; }
+.tchip .st:disabled { cursor: default; }
+.tchip .tt { background: none; border: 0; padding: 2px 2px; font: inherit; color: var(--ink); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
+.tchip .tt:hover { color: var(--brand); }
+.tchip .av { font-size: 9.5px; font-weight: 700; color: var(--ink-3); background: var(--surface); border: 1px solid var(--border); border-radius: 50%; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; }
+.tchip .pri { position: absolute; top: -2px; inset-inline-end: -2px; width: 7px; height: 7px; border-radius: 50%; }
+.tchip.s-doing { border-color: color-mix(in srgb, var(--orange) 45%, var(--border)); background: color-mix(in srgb, var(--orange) 10%, var(--surface)); }
+.tchip.s-doing .st { background: color-mix(in srgb, var(--orange) 25%, transparent); color: var(--orange); }
+.tchip.s-done { border-color: color-mix(in srgb, var(--green) 45%, var(--border)); background: color-mix(in srgb, var(--green) 11%, var(--surface)); }
+.tchip.s-done .st { background: color-mix(in srgb, var(--green) 28%, transparent); color: var(--green); }
+.tchip.s-done .tt { color: var(--ink-2); text-decoration: line-through; }
+.tchip.late { border-color: var(--red); }
+.tchip.addchip { padding: 2px 10px; border-style: dashed; color: var(--ink-3); background: transparent; cursor: pointer; font: inherit; font-size: 12px; gap: 4px; }
+.tchip.addchip:hover { color: var(--brand); border-color: var(--brand); }
+@media (max-width: 700px) { .tat-viewtoggle { margin-inline-start: 0; } .tat-cclients { grid-template-columns: 1fr; } }
+.tat-ccard .head .tat-icon-btn { flex: none; width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }

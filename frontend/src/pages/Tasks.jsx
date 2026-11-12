@@ -29,6 +29,7 @@ function monthLabel(m) {
   return `${monthNames()[mo - 1]} ${y}`;
 }
 const isOverdue = (task) => task.status !== "done" && task.due_date && task.due_date < todayISO();
+function loadView() { try { return localStorage.getItem("tat_tasks_view") === "table" ? "table" : "cards"; } catch { return "cards"; } }
 const initials = (name) => String(name || "").trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 
 export default function Tasks() {
@@ -44,6 +45,8 @@ export default function Tasks() {
   const [editing, setEditing] = useState(null); // task object (id => edit, no id => new)
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [tplClient, setTplClient] = useState("");
+  const [view, setViewState] = useState(loadView());
+  const setView = (v) => { setViewState(v); try { localStorage.setItem("tat_tasks_view", v); } catch { /* ignore */ } };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -192,6 +195,10 @@ export default function Tasks() {
           <input className="tat-sbox-input" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("ابحث في التاسكات…")} />
           {query && <button className="tat-sbox-clear" onClick={() => setQuery("")} aria-label={t("مسح")}>×</button>}
         </div>
+        <div className="tat-viewtoggle" role="group" aria-label={t("طريقة العرض")}>
+          <button type="button" className={view === "cards" ? "on" : ""} onClick={() => setView("cards")} aria-pressed={view === "cards"} title={t("كروت")}><Icon name="widgets" size={15} /><span>{t("كروت")}</span></button>
+          <button type="button" className={view === "table" ? "on" : ""} onClick={() => setView("table")} aria-pressed={view === "table"} title={t("جدول")}><Icon name="table" size={15} /><span>{t("جدول")}</span></button>
+        </div>
       </div>
 
       {loading ? <LoadingBox rows={3} /> : tasks.length === 0 ? (
@@ -209,6 +216,45 @@ export default function Tasks() {
             <span className="legend"><i className="s-todo" />{t("جديد")} <i className="s-doing" />{t("جاري")} <i className="s-done" />{t("تم")} — {t("اضغط الخلية لتغيير الحالة")}</span>
           </div>
 
+          {view === "cards" ? (
+            <div className="tat-cclients">
+              {rows.map((r) => {
+                const list = columns.flatMap((c) => r.cells[c] || []);
+                const pct = r.total ? Math.round((r.done / r.total) * 100) : 0;
+                const late = list.filter(isOverdue).length;
+                return (
+                  <div key={r.id} className={`tat-ccard${r.done === r.total && r.total ? " complete" : ""}`}>
+                    <div className="head">
+                      <span className="ring" style={{ background: `conic-gradient(var(--green) ${pct}%, var(--border) 0)` }}><span className="tat-num">{r.done}/{r.total}</span></span>
+                      <div className="who">
+                        <button type="button" className="name" onClick={() => setClientFilter(String(r.id) === clientFilter ? "" : String(r.id))} title={r.name}>{r.name}</button>
+                        <span className="sub">{pct}%{late ? <b className="late"> · {late} {t("متأخرة")}</b> : null}</span>
+                      </div>
+                      {can("tasks", "view") && <button type="button" className="tat-icon-btn" onClick={() => { setTplClient(String(r.id)); setTemplatesOpen(true); }} aria-label={t("إدارة تاسكات العميل")} title={t("إدارة تاسكات العميل")}><Icon name="settings" size={15} /></button>}
+                    </div>
+                    <div className="chips">
+                      {list.map((x) => (
+                        <div key={x.id} className={`tchip s-${x.status}${isOverdue(x) ? " late" : ""}`}>
+                          <button type="button" className="st" disabled={!canEdit} onClick={() => changeStatus(x, NEXT[x.status])}
+                            title={`${STATUS_LABEL[x.status]}${x.due_date ? ` · ${x.due_date}` : ""}`} aria-label={`${x.title} — ${STATUS_LABEL[x.status]}`}>
+                            <Icon name={x.status === "done" ? "check" : x.status === "doing" ? "clock" : "minus"} size={12} />
+                          </button>
+                          <button type="button" className="tt" onClick={() => openEdit(x)} title={x.assignee_name || t("تفاصيل")}>{x.title}</button>
+                          {x.priority !== "normal" && <i className="pri" style={{ background: PRIORITY_COLOR[x.priority] }} />}
+                          {x.assignee_name && <span className="av">{initials(x.assignee_name)}</span>}
+                        </div>
+                      ))}
+                      {can("tasks", "create") && (
+                        <button type="button" className="tchip addchip" onClick={() => setEditing({ client_id: String(r.id), title: "", description: "", status: "todo", priority: "normal", assignee_id: "", due_date: "", notes: "", linksText: "" })}>
+                          <Icon name="plus" size={12} />{t("تاسك")}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
           <div className="tat-matrix-wrap">
             <table className="tat-matrix">
               <thead>
@@ -256,6 +302,7 @@ export default function Tasks() {
               </tbody>
             </table>
           </div>
+          )}
         </>
       )}
 
