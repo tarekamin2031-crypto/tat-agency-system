@@ -170,6 +170,7 @@ export const api = {
   updateInvoice: (id, payload) => request(`/invoices/${id}`, { method: "PUT", body: payload }),
   deleteInvoice: (id) => request(`/invoices/${id}`, { method: "DELETE" }),
   generateMonthlyInvoices: () => request("/invoices/generate-monthly", { method: "POST" }),
+  generateInvoiceForClient: (clientId) => request("/invoices/generate-monthly/client", { method: "POST", body: { client_id: clientId } }),
 
   async openInvoicePdf(id) {
     const token = getToken();

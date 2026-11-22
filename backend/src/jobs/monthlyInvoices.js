@@ -20,6 +20,39 @@ async function nextInvoiceNumber(agencyId) {
   return `${invoice_prefix || "INV"}-${String(max + 1).padStart(4, "0")}`;
 }
 
+// Creates this month's automatic invoice for one client (caller already checked it is due / not billed yet).
+async function createAutoInvoice(c, agencyId, thisMonthFirst) {
+  const thisMonthISO = toISODate(thisMonthFirst);
+  // If the client has exactly one assigned service, tag the auto-invoice
+  // with it so Service Analytics keeps working without manual editing.
+  // With zero or multiple services assigned, leave it unassigned — no
+  // safe way to guess which one a multi-service client is being billed for.
+  const assignedServices = await pool.query(
+    "SELECT cs.service_id FROM client_services cs JOIN services s ON s.id = cs.service_id WHERE cs.client_id = $1 AND s.agency_id = $2",
+    [c.id, agencyId]
+  );
+  const serviceId = assignedServices.rows.length === 1 ? assignedServices.rows[0].service_id : null;
+
+  const number = await nextInvoiceNumber(agencyId);
+  const dueDate = new Date(thisMonthFirst);
+  dueDate.setDate(dueDate.getDate() + 7);
+
+  const monthLabelAr = `${MONTHS_AR[thisMonthFirst.getMonth()]} ${thisMonthFirst.getFullYear()}`;
+
+  const inv = await pool.query(
+    `INSERT INTO invoices
+      (client_id, number, description, amount, currency, issue_date, due_date, status, is_auto_generated, for_month, service_id, agency_id)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,'sent', true, $8, $9, $10)
+     RETURNING *`,
+    [
+      c.id, number, `فاتورة تجديد تلقائي - ${monthLabelAr}`, c.contract_value,
+      c.currency, thisMonthISO, toISODate(dueDate), thisMonthISO, serviceId, agencyId,
+    ]
+  );
+  await syncCollectionForInvoice(inv.rows[0].id);
+  return inv.rows[0];
+}
+
 /**
  * Generates this month's invoices for every active client whose renewal
  * cycle says a bill is due this month (monthly clients every month,
@@ -44,34 +77,7 @@ async function generateForAgency(agencyId) {
     );
     if (dup.rows.length > 0) continue;
 
-    // If the client has exactly one assigned service, tag the auto-invoice
-    // with it so Service Analytics keeps working without manual editing.
-    // With zero or multiple services assigned, leave it unassigned — no
-    // safe way to guess which one a multi-service client is being billed for.
-    const assignedServices = await pool.query(
-      "SELECT cs.service_id FROM client_services cs JOIN services s ON s.id = cs.service_id WHERE cs.client_id = $1 AND s.agency_id = $2",
-      [c.id, agencyId]
-    );
-    const serviceId = assignedServices.rows.length === 1 ? assignedServices.rows[0].service_id : null;
-
-    const number = await nextInvoiceNumber(agencyId);
-    const dueDate = new Date(thisMonthFirst);
-    dueDate.setDate(dueDate.getDate() + 7);
-
-    const monthLabelAr = `${MONTHS_AR[thisMonthFirst.getMonth()]} ${thisMonthFirst.getFullYear()}`;
-
-    const inv = await pool.query(
-      `INSERT INTO invoices
-        (client_id, number, description, amount, currency, issue_date, due_date, status, is_auto_generated, for_month, service_id, agency_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,'sent', true, $8, $9, $10)
-       RETURNING *`,
-      [
-        c.id, number, `فاتورة تجديد تلقائي - ${monthLabelAr}`, c.contract_value,
-        c.currency, thisMonthISO, toISODate(dueDate), thisMonthISO, serviceId, agencyId,
-      ]
-    );
-    await syncCollectionForInvoice(inv.rows[0].id);
-    created.push(inv.rows[0]);
+    created.push(await createAutoInvoice(c, agencyId, thisMonthFirst));
   }
 
   return created;
@@ -88,4 +94,16 @@ async function generateMonthlyInvoices(agencyId) {
   return created;
 }
 
-module.exports = { generateMonthlyInvoices };
+// One client only, on request: ignores the renewal-cycle schedule (the user explicitly asked for this client) but
+// never bills the same month twice. Returns { invoice } or { invoice: null, reason: "not_found" | "not_active" | "already_billed" }.
+async function generateInvoiceForClient(agencyId, clientId) {
+  const thisMonthFirst = firstOfMonth(new Date());
+  const c = (await pool.query("SELECT * FROM clients WHERE id = $1 AND agency_id = $2", [clientId, agencyId])).rows[0];
+  if (!c) return { invoice: null, reason: "not_found" };
+  if (c.contract_status !== "active") return { invoice: null, reason: "not_active" };
+  const dup = await pool.query("SELECT id FROM invoices WHERE client_id = $1 AND for_month = $2 AND agency_id = $3", [c.id, toISODate(thisMonthFirst), agencyId]);
+  if (dup.rows.length) return { invoice: null, reason: "already_billed" };
+  return { invoice: await createAutoInvoice(c, agencyId, thisMonthFirst) };
+}
+
+module.exports = { generateMonthlyInvoices, generateInvoiceForClient };

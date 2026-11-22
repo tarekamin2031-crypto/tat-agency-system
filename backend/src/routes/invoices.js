@@ -2,7 +2,7 @@ const express = require("express");
 const pool = require("../db/pool");
 const { requireAuth, requirePermission } = require("../middleware/auth");
 const { renderInvoicePdf } = require("../pdf/renderInvoicePdf");
-const { generateMonthlyInvoices } = require("../jobs/monthlyInvoices");
+const { generateMonthlyInvoices, generateInvoiceForClient } = require("../jobs/monthlyInvoices");
 const { resolveDateRange } = require("../utils/dateRange");
 
 const { normalizeInvoicePayment } = require("../lib/invoicePayment");
@@ -237,6 +237,21 @@ router.get("/:id/pdf", requirePermission("invoices", "view"), async (req, res) =
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error generating invoice PDF" });
+  }
+});
+
+// POST /api/invoices/generate-monthly/client { client_id } — this month's invoice for ONE client
+router.post("/generate-monthly/client", requirePermission("invoices", "create"), async (req, res) => {
+  try {
+    const clientId = Number(req.body && req.body.client_id);
+    if (!Number.isInteger(clientId) || clientId <= 0) return res.status(400).json({ error: "client_id is required" });
+    const r = await generateInvoiceForClient(req.user.agencyId, clientId);
+    if (r.reason === "not_found") return res.status(404).json({ error: "Client not found" });
+    if (r.invoice) audit(req, { action: "invoice.generate_monthly", entity: "invoice", entityId: r.invoice.id, summary: r.invoice.number, after: r.invoice });
+    res.json({ created: r.invoice ? 1 : 0, reason: r.reason || null, invoice: r.invoice || null });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error generating the invoice" });
   }
 });
 

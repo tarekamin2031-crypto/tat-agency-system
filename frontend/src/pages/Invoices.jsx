@@ -87,11 +87,21 @@ export default function Invoices() {
     try { await api.openInvoiceReceipt(id); } catch (err) { alert(err.message); }
   };
   const [generating, setGenerating] = useState(false);
-  const runMonthlyGeneration = async () => {
+  const [genOpen, setGenOpen] = useState(false);
+  // clientId set → one client only; otherwise every client that is due this month
+  const runMonthlyGeneration = async (clientId) => {
     setGenerating(true);
     try {
-      const res = await api.generateMonthlyInvoices();
-      alert(t("تم إنشاء {created} فاتورة تلقائية لهذا الشهر", { created: res.created }));
+      if (clientId) {
+        const res = await api.generateInvoiceForClient(clientId);
+        if (res.created) alert(t("تم إنشاء فاتورة {number} لهذا الشهر", { number: res.invoice.number }));
+        else if (res.reason === "already_billed") alert(t("العميل ده عليه فاتورة لهذا الشهر بالفعل"));
+        else alert(t("العميل ده مش نشط، فمش هتتولد له فاتورة"));
+      } else {
+        const res = await api.generateMonthlyInvoices();
+        alert(t("تم إنشاء {created} فاتورة تلقائية لهذا الشهر", { created: res.created }));
+      }
+      setGenOpen(false);
       load();
     } catch (err) {
       alert(t("تعذر تشغيل الفوترة التلقائية: ") + err.message);
@@ -146,7 +156,7 @@ export default function Invoices() {
             <FilterPills options={[{ id: "all", get label() { return t("الكل"); } }, ...INVOICE_STATUSES]} value={statusFilter} onChange={setStatusFilter} />
             <div style={{ display: "flex", gap: 8 }}>
               {can("invoices", "create") && (
-                <button onClick={runMonthlyGeneration} disabled={generating} style={{ ...btnStyle(TEAL), opacity: generating ? 0.6 : 1 }}>
+                <button onClick={() => setGenOpen(true)} disabled={generating} style={{ ...btnStyle(TEAL), opacity: generating ? 0.6 : 1 }}>
                   {generating ? t("جارٍ التوليد…") : t("توليد فواتير هذا الشهر")}
                 </button>
               )}
@@ -185,12 +195,47 @@ export default function Invoices() {
       {invModalOpen && editingInvoice && (
         <InvoiceModal invoice={editingInvoice} clients={clients} services={services} onClose={() => { setInvModalOpen(false); setEditingInvoice(null); }} onSave={saveInvoice} onDelete={editingInvoice.id && can("invoices", "delete") ? () => deleteInvoiceEntry(editingInvoice.id) : null} />
       )}
+      {genOpen && <GenerateModal clients={clients} busy={generating} onClose={() => setGenOpen(false)} onRun={runMonthlyGeneration} />}
     </div>
   );
 }
 
 function TabBtn({ active, onClick, children }) {
   return <button type="button" className={`tat-tab${active ? " on" : ""}`} onClick={onClick}>{children}</button>;
+}
+
+function GenerateModal({ clients, busy, onClose, onRun }) {
+  const active = clients.filter((c) => !c.contract_status || c.contract_status === "active");
+  const [mode, setMode] = useState("all");
+  const [clientId, setClientId] = useState("");
+  const ok = mode === "all" || !!clientId;
+  const opt = (id, title, desc) => (
+    <label style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "10px 12px", border: `1px solid ${mode === id ? "var(--brand)" : "var(--border)"}`, borderRadius: 10, cursor: "pointer", marginBottom: 8 }}>
+      <input type="radio" name="gen-mode" checked={mode === id} onChange={() => setMode(id)} style={{ marginTop: 4 }} />
+      <span><b>{title}</b><div style={{ fontSize: 12.5, color: "var(--ink-3)", marginTop: 2 }}>{desc}</div></span>
+    </label>
+  );
+  return (
+    <Overlay onClose={onClose}>
+      <ModalShell onClose={onClose} title={t("توليد فواتير هذا الشهر")}>
+        {opt("all", t("كل العملاء المستحقين"), t("كل عميل نشط دورة تجديده بتقول إن عليه فاتورة هذا الشهر (اللي اتفوتر قبل كده بيتخطّى)."))}
+        {opt("one", t("عميل واحد بس"), t("فاتورة هذا الشهر لعميل واحد تختاره، حتى لو مش دوره في دورة التجديد. لو عليه فاتورة بالفعل مش هتتكرر."))}
+        {mode === "one" && (
+          <>
+            <FieldLabel>{t("العميل")}</FieldLabel>
+            <select value={clientId} onChange={(e) => setClientId(e.target.value)} style={inputStyle} autoFocus>
+              <option value="">{t("اختر العميل")}</option>
+              {active.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </>
+        )}
+        <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+          <button disabled={!ok || busy} onClick={() => ok && onRun(mode === "one" ? Number(clientId) : null)} style={{ ...btnStyle(TEAL), flex: 1, opacity: ok && !busy ? 1 : 0.5 }}>{busy ? t("جارٍ التوليد…") : t("توليد")}</button>
+          <button onClick={onClose} style={btnStyle("var(--ink-3)")}>{t("إلغاء")}</button>
+        </div>
+      </ModalShell>
+    </Overlay>
+  );
 }
 
 function InvoiceModal({ invoice, clients, services, onClose, onSave, onDelete }) {
