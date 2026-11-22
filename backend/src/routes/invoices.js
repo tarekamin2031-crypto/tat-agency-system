@@ -141,6 +141,7 @@ router.put("/:id", requirePermission("invoices", "edit"), async (req, res) => {
     const result = await pool.query(
       `UPDATE invoices SET client_id=$1, number=$2, description=$3, amount=$4, currency=$5,
         issue_date=$6, due_date=$7, status=$8, service_id=$9, paid_amount=$10,
+        for_month = CASE WHEN for_month IS NULL THEN NULL ELSE date_trunc('month', $6::date)::date END,
         receipt_data = CASE WHEN $11 THEN $12 ELSE receipt_data END,
         receipt_mime = CASE WHEN $11 THEN $13 ELSE receipt_mime END,
         receipt_filename = CASE WHEN $11 THEN $14 ELSE receipt_filename END
