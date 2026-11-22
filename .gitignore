@@ -20,3 +20,7 @@ backups/
 # local tooling
 .claude/
 .neon
+
+# Neon agent-skill docs installed by the neon CLI (local tooling only)
+.agents/
+skills-lock.json
